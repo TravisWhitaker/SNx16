@@ -154,7 +154,7 @@ incPC :: CPU -> CPU
 incPC c = c {pc = (pc c) + 1}
 
 setPC :: Word16 -> CPU -> CPU
-setPC i c = c {pc = i}
+setPC i c = c {pc = i + (pc c)}
 
 -- | Please help.
 addFlags :: Word16 -> Word16 -> Word16 -> (Bool, Bool, Bool)
@@ -186,7 +186,7 @@ mulFlags a b s = let a' :: Int16
                      s' :: Int16
                      s' = fromIntegral s
                      z = s == 0
-                     n = s < 0
+                     n = s' < 0
                      c = (a'' * b'') > (fromIntegral s')
                  in (z, n, c)
 
@@ -214,8 +214,8 @@ op (MulI ra im)     c = let a = getRegW ra c
                             i = signExtend im
                             s = signedMul a i
                             f = mulFlags a i s
-                        in incPC $ setRegW ra c s
-op (JI im)          c = setPC (signedAdd (pc c) im) c
+                        in incPC $ setFlags f $ setRegW ra c s
+op (JI im)          c = c {pc = (signedAdd (pc c) im)}
 op (JR ra im)       c = setPC (signedAdd (getRegW ra c) (fromIntegral im)) c
 op (JE ra im)       c = if (zero c)
                         then setPC (signedAdd (getRegW ra c) (fromIntegral im)) c

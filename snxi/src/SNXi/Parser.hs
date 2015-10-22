@@ -290,15 +290,6 @@ rn = let pSP  = "sp" >> return SP
          p30  = "30" >> return R30
          p31  = "31" >> return R31
      in A.choice [ pSP
-                 , p1
-                 , p2
-                 , p3
-                 , p4
-                 , p5
-                 , p6
-                 , p7
-                 , p8
-                 , p9
                  , p10
                  , p11
                  , p12
@@ -321,6 +312,15 @@ rn = let pSP  = "sp" >> return SP
                  , p29
                  , p30
                  , p31
+                 , p1
+                 , p2
+                 , p3
+                 , p4
+                 , p5
+                 , p6
+                 , p7
+                 , p8
+                 , p9
                  ]
 
 imm :: Int -> A.Parser Word8
