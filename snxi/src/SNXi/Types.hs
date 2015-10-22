@@ -58,8 +58,8 @@ data Reg = SP
          deriving (Eq, Ord, Show)
 
 data RegW = R Reg
-          | U Reg
-          | L Reg
+--          | U Reg
+--          | L Reg
           deriving (Eq, Ord, Show)
 
 data CPU = CPU {
@@ -110,9 +110,13 @@ data Op = AddR RegW RegW !Word8 -- ^ Actually restricted to 2 bits.
         | JI !Word16            -- ^ Actually restricted to 12 bits.
         | JR RegW !Word8        -- ^ Actually restricted to 4 bits.
         | JE RegW !Word8        -- ^ Actually restricted to 4 bits.
+        | JEI !Word16           -- ^ Actually restricted to 12 bits.
         | JH RegW !Word8        -- ^ Actually restricted to 4 bits.
+        | JHI !Word16           -- ^ Actually restricted to 12 bits.
         | JL RegW !Word8        -- ^ Actually restricted to 4 bits.
+        | JLI !Word16           -- ^ Actually restricted to 12 bits.
         | JC RegW !Word8        -- ^ Actually restricted to 4 bits.
+        | JCI !Word16           -- ^ Actually restricted to 12 bits.
         | MovR RegW RegW
         | MovI RegW !Word8      -- ^ Actually restricted to 7 bits.
         | MovL RegW RegW

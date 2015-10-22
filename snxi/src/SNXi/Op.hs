@@ -59,8 +59,8 @@ getReg R31 = r31
 
 getRegW :: RegW -> CPU -> Word16
 getRegW (R r) = getReg r
-getRegW (U r) = (0xFF00 .&.) . (getReg r)
-getRegW (L r) = (0x00FF .&.) . (getReg r)
+--getRegW (U r) = (0xFF00 .&.) . (getReg r)
+--getRegW (L r) = (0x00FF .&.) . (getReg r)
 
 setReg :: Reg -> CPU -> Word16 -> CPU
 setReg SP c  = (\v -> c {sp  = v})
@@ -98,8 +98,8 @@ setReg R31 c = (\v -> c {r31 = v})
 
 setRegW :: RegW -> CPU -> Word16 -> CPU
 setRegW (R r) c v = (setReg r) c v
-setRegW (U r) c v = (setReg r) c (0xFF00 .&. v)
-setRegW (L r) c v = (setReg r) c (0x00FF .&. v)
+--setRegW (U r) c v = (setReg r) c (0xFF00 .&. v)
+--setRegW (L r) c v = (setReg r) c (0x00FF .&. v)
 
 getDmemB :: Word16 -> CPU -> Word8
 getDmemB a c = (dmem c) VU.! (fromIntegral a)
@@ -220,15 +220,26 @@ op (JR ra im)       c = setPC (signedAdd (getRegW ra c) (fromIntegral im)) c
 op (JE ra im)       c = if (zero c)
                         then setPC (signedAdd (getRegW ra c) (fromIntegral im)) c
                         else incPC c
+op (JEI im)         c = if (zero c)
+                        then c {pc = (signedAdd (pc c) im)}
+                        else incPC c
 op (JH ra im)       c = if (neg c)
                         then incPC c
                         else setPC (signedAdd (getRegW ra c) (fromIntegral im)) c
-
+op (JHI im)         c = if (neg c)
+                        then incPC c
+                        else c {pc = (signedAdd (pc c) im)}
 op (JL ra im)       c = if (neg c)
                         then setPC (signedAdd (getRegW ra c) (fromIntegral im)) c
                         else incPC c
+op (JLI im)         c =if (neg c)
+                        then c {pc = (signedAdd (pc c) im)}
+                        else incPC c
 op (JC ra im)       c = if (carry c)
                         then setPC (signedAdd (getRegW ra c) (fromIntegral im)) c
+                        else incPC c
+op (JCI im)         c =if (carry c)
+                        then c {pc = (signedAdd (pc c) im)}
                         else incPC c
 op (MovR rd rs)     c = let s = getRegW rs c
                         in incPC $ setRegW rd c s
@@ -236,24 +247,24 @@ op (MovI rd im)     c = let i = fromIntegral im
                         in incPC $ setRegW rd c i
 op (MovL (R rd) ra) c = let v = getDmemW (getRegW ra c) c
                         in incPC $ setRegW (R rd) c v
-op (MovL (U rd) ra) c = let v  = getDmemB (getRegW ra c) c
-                            v' :: Word16
-                            v' = (fromIntegral v) `shiftL` 8
-                        in incPC $ setRegW (U rd) c v'
-op (MovL (L rd) ra) c = let v = getDmemB (getRegW ra c) c
-                            v' :: Word16
-                            v' = fromIntegral v
-                        in incPC $ setRegW (L rd) c v'
+--op (MovL (U rd) ra) c = let v  = getDmemB (getRegW ra c) c
+--                            v' :: Word16
+--                            v' = (fromIntegral v) `shiftL` 8
+--                        in incPC $ setRegW (U rd) c v'
+--op (MovL (L rd) ra) c = let v = getDmemB (getRegW ra c) c
+--                            v' :: Word16
+--                            v' = fromIntegral v
+--                        in incPC $ setRegW (L rd) c v'
 op (MovS ra (R rs)) c = let a = getRegW ra c
                             v = getRegW (R rs) c
                         in incPC $ setDmemW a v c
-op (MovS ra (U rs)) c = let a = getRegW ra c
-                            v = getRegW (U rs) c
-                            v' :: Word8
-                            v' = fromIntegral (v `div` 256)
-                        in incPC $ setDmemB a v' c
-op (MovS ra (L rs)) c = let a = getRegW ra c
-                            v = getRegW (L rs) c
-                            v' :: Word8
-                            v' = fromIntegral (v .&. 0x00FF)
-                        in incPC $ setDmemB a v' c
+--op (MovS ra (U rs)) c = let a = getRegW ra c
+--                            v = getRegW (U rs) c
+--                            v' :: Word8
+--                            v' = fromIntegral (v `div` 256)
+--                        in incPC $ setDmemB a v' c
+--op (MovS ra (L rs)) c = let a = getRegW ra c
+--                            v = getRegW (L rs) c
+--                            v' :: Word8
+--                            v' = fromIntegral (v .&. 0x00FF)
+--                        in incPC $ setDmemB a v' c

@@ -143,6 +143,14 @@ objs = translate >>= link
           deref m i (o, Nothing) = o
           deref m i ((JI _), Just l) = case M.lookup l m of Nothing -> error "no such label"
                                                             (Just r) -> JI (rel (fromIntegral i) r)
+          deref m i ((JEI _), Just l) = case M.lookup l m of Nothing -> error "no such label"
+                                                             (Just r) -> JEI (rel (fromIntegral i) r)
+          deref m i ((JHI _), Just l) = case M.lookup l m of Nothing -> error "no such label"
+                                                             (Just r) -> JHI (rel (fromIntegral i) r)
+          deref m i ((JLI _), Just l) = case M.lookup l m of Nothing -> error "no such label"
+                                                             (Just r) -> JLI (rel (fromIntegral i) r)
+          deref m i ((JCI _), Just l) = case M.lookup l m of Nothing -> error "no such label"
+                                                             (Just r) -> JCI (rel (fromIntegral i) r)
           rel :: Word16 -> Word16 -> Word16
           rel i r = let i' :: Int
                         i' = fromIntegral i
@@ -188,7 +196,7 @@ dir = (blankLine <|> (((skipSpace >> commentLine) <|> unlabeledDir <|> labeledDi
                 return (Just (Nothing, o, l'))
 
 mnemonic :: A.Parser (Op, Maybe B.ByteString)
-mnemonic = (nl <$> (add <|> mul <|> je <|> jh <|> jl <|> jc <|> mov)) <|> j <|> fail "malformed mnemonic"
+mnemonic = (nl <$> (add <|> mul <|> mov)) <|> j <|> je <|> jh <|> jl <|> jc <|> fail "malformed mnemonic"
     where nl = (,Nothing)
 
 add :: A.Parser Op
@@ -208,17 +216,25 @@ j = "j" >> skipSpace >> (jr <|> ji)
     where ji = ((JI 0,) . Just) <$> lab
           jr = (\(r, d) -> (JR r d, Nothing)) <$> rega'
 
-je :: A.Parser Op
-je = "je" >> skipSpace >> (\(r, d) -> JE r d) <$> rega'
+je :: A.Parser (Op, Maybe B.ByteString)
+je = "je" >> skipSpace >> (jer <|> jei)
+    where jei = ((JEI 0,) . Just) <$> lab
+          jer = (\(r, d) -> ((JE r d), Nothing)) <$> rega'
 
-jh :: A.Parser Op
-jh = "jh" >> skipSpace >> (\(r, d) -> JH r d) <$> rega'
+jh :: A.Parser (Op, Maybe B.ByteString)
+jh = "jh" >> skipSpace >> (jhr <|> jhi)
+    where jhi = ((JHI 0,) . Just) <$> lab
+          jhr = (\(r, d) -> ((JH r d), Nothing)) <$> rega'
 
-jl :: A.Parser Op
-jl = "jh" >> skipSpace >> (\(r, d) -> JL r d) <$> rega'
+jl :: A.Parser (Op, Maybe B.ByteString)
+jl = "jl" >> skipSpace >> (jlr <|> jli)
+    where jli = ((JLI 0,) . Just) <$> lab
+          jlr = (\(r, d) -> ((JL r d), Nothing)) <$> rega'
 
-jc :: A.Parser Op
-jc = "jh" >> skipSpace >> (\(r, d) -> JC r d) <$> rega'
+jc :: A.Parser (Op, Maybe B.ByteString)
+jc = "jc" >> skipSpace >> (jcr <|> jci)
+    where jci = ((JCI 0,) . Just) <$> lab
+          jcr = (\(r, d) -> ((JC r d), Nothing)) <$> rega'
 
 mov :: A.Parser Op
 mov = "mov" >> skipSpace >> (movR <|> movI <|> movL <|> movS <|> fail "malformed mov")
@@ -228,17 +244,31 @@ mov = "mov" >> skipSpace >> (movR <|> movI <|> movL <|> movS <|> fail "malformed
           movS = MovS <$> (rega <* skipArgSep) <*> regw
 
 regw :: A.Parser RegW
-regw = rf <|> ru <|> rl
+--regw = rf <|> ru <|> rl
+regw = rf
 
 rega :: A.Parser RegW
-rega = "[" >> skipSpace >> ((rf <|> ru <|> rl) <* (skipSpace >> "]"))
+--rega = "[" >> skipSpace >> ((rf <|> ru <|> rl) <* (skipSpace >> "]"))
+rega = "[" >> skipSpace >> (rf <* (skipSpace >> "]"))
 
 rega' :: A.Parser (RegW, Word8)
+--rega' = ((,0) <$> rega) <|> rega''
+--    where rega'' = do
+--            "["
+--            skipSpace
+--            r <- (rf <|> ru <|> rl)
+--            skipSpace
+--            "+"
+--            skipSpace
+--            i <- imm 4
+--            skipSpace
+--            "]"
+--            return (r, i)
 rega' = ((,0) <$> rega) <|> rega''
     where rega'' = do
             "["
             skipSpace
-            r <- (rf <|> ru <|> rl)
+            r <- rf
             skipSpace
             "+"
             skipSpace
@@ -250,11 +280,11 @@ rega' = ((,0) <$> rega) <|> rega''
 rf :: A.Parser RegW
 rf = "r" >> R <$> rn
 
-ru :: A.Parser RegW
-ru = "u" >> U <$> rn
+--ru :: A.Parser RegW
+--ru = "u" >> U <$> rn
 
-rl :: A.Parser RegW
-rl = "l" >> L <$> rn
+--rl :: A.Parser RegW
+--rl = "l" >> L <$> rn
 
 rn :: A.Parser Reg
 rn = let pSP  = "sp" >> return SP
