@@ -196,7 +196,7 @@ dir = (blankLine <|> (((skipSpace >> commentLine) <|> unlabeledDir <|> labeledDi
                 return (Just (Nothing, o, l'))
 
 mnemonic :: A.Parser (Op, Maybe B.ByteString)
-mnemonic = (nl <$> (add <|> mul <|> mov)) <|> j <|> je <|> jh <|> jl <|> jc <|> fail "malformed mnemonic"
+mnemonic = (nl <$> (add <|> mul <|> mov)) <|> je <|> jh <|> jl <|> jc <|> j <|> fail "malformed mnemonic"
     where nl = (,Nothing)
 
 add :: A.Parser Op
@@ -364,6 +364,6 @@ imm w = A.signed A.decimal >>= val
                                                 else return $ (0xFF `shiftL` w) .|. (fromIntegral i))
 
 lab :: A.Parser B.ByteString
-lab = A.takeWhile1 (\c -> (c /= ':') && (c /= '\n')) >>= val
+lab = A.takeWhile1 (\c -> (c /= ':') && (c /= '\n') && (c /= ' ') && (c /= '\t') && (c /= ';')) >>= val
     where val l = if validLabel l then return l
                                   else fail "bad label, must not contain space, tab, comma, or semicolon."
