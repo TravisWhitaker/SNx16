@@ -10,9 +10,13 @@ Portability : POSIX
 SNx16 virtual machine data types.
 -}
 
+{-# LANGUAGE BangPatterns #-}
+
+module SNXi.Types where
+
 import Data.Word
 
-import qualified Data.IntMap.Strict as M
+import qualified Data.Vector.Unboxed as V
 
 data Reg = SP
          | R1
@@ -54,54 +58,58 @@ data RegW = R Reg
           deriving (Eq, Ord, Show)
 
 data CPU = CPU {
-    sp    :: Word16
-  , r1    :: Word16
-  , r2    :: Word16
-  , r3    :: Word16
-  , r4    :: Word16
-  , r5    :: Word16
-  , r6    :: Word16
-  , r7    :: Word16
-  , r8    :: Word16
-  , r9    :: Word16
-  , r10   :: Word16
-  , r11   :: Word16
-  , r12   :: Word16
-  , r13   :: Word16
-  , r14   :: Word16
-  , r15   :: Word16
-  , r16   :: Word16
-  , r17   :: Word16
-  , r18   :: Word16
-  , r19   :: Word16
-  , r20   :: Word16
-  , r21   :: Word16
-  , r22   :: Word16
-  , r23   :: Word16
-  , r24   :: Word16
-  , r25   :: Word16
-  , r26   :: Word16
-  , r27   :: Word16
-  , r28   :: Word16
-  , r29   :: Word16
-  , r30   :: Word16
-  , r31   :: Word16
-  , mem   :: M.IntMap Word16
-  , zero  :: Bool
-  , carry :: Bool
-  , neg   :: Bool
+    sp    :: !Word16
+  , r1    :: !Word16
+  , r2    :: !Word16
+  , r3    :: !Word16
+  , r4    :: !Word16
+  , r5    :: !Word16
+  , r6    :: !Word16
+  , r7    :: !Word16
+  , r8    :: !Word16
+  , r9    :: !Word16
+  , r10   :: !Word16
+  , r11   :: !Word16
+  , r12   :: !Word16
+  , r13   :: !Word16
+  , r14   :: !Word16
+  , r15   :: !Word16
+  , r16   :: !Word16
+  , r17   :: !Word16
+  , r18   :: !Word16
+  , r19   :: !Word16
+  , r20   :: !Word16
+  , r21   :: !Word16
+  , r22   :: !Word16
+  , r23   :: !Word16
+  , r24   :: !Word16
+  , r25   :: !Word16
+  , r26   :: !Word16
+  , r27   :: !Word16
+  , r28   :: !Word16
+  , r29   :: !Word16
+  , r30   :: !Word16
+  , r31   :: !Word16
+  , dmem  :: V.Vector Word8 -- ^ Limited to 2^16 elements.
+  , pc    :: !Word16
+  , pmem  :: V.Vector Op     -- ^ Limited to 2^16 elements.
+  , zero  :: !Bool
+  , neg   :: !Bool
+  , carry :: !Bool
   } deriving (Eq, Ord, Show)
 
-data Op = AddR RegW RegW Word8 -- ^ Actually restricted to 2 bits.
-        | AddI RegW Word8      -- ^ Actually restricted to 7 bits.
-        | MulR RegW RegW Word8 -- ^ Actually restricted to 2 bits.
-        | MulI RegW Word8      -- ^ Actually restricted to 7 bits.
-        | JI Word16            -- ^ Actually restricted to 12 bits.
-        | JR RegW Word8        -- ^ Actually restricted to 8 bits.
-        | JE RegW Word8        -- ^ Actually restricted to 8 bits.
-        | JH RegW Word8        -- ^ Actually restricted to 8 bits.
-        | JL RegW Word8        -- ^ Actually restricted to 8 bits.
-        | JC RegW Word8        -- ^ Actually restricted to 8 bits.
+data Op = AddR RegW RegW !Word8 -- ^ Actually restricted to 2 bits.
+        | AddI RegW !Word8      -- ^ Actually restricted to 7 bits.
+        | MulR RegW RegW !Word8 -- ^ Actually restricted to 2 bits.
+        | MulI RegW !Word8      -- ^ Actually restricted to 7 bits.
+        | JI !Word16            -- ^ Actually restricted to 12 bits.
+        | JR RegW !Word8        -- ^ Actually restricted to 4 bits.
+        | JE RegW !Word8        -- ^ Actually restricted to 4 bits.
+        | JH RegW !Word8        -- ^ Actually restricted to 4 bits.
+        | JL RegW !Word8        -- ^ Actually restricted to 4 bits.
+        | JC RegW !Word8        -- ^ Actually restricted to 4 bits.
         | MovR RegW RegW
+        | MovI RegW !Word8      -- ^ Actually restricted to 7 bits.
         | MovL RegW RegW
         | MovS RegW RegW
+        deriving (Eq, Ord, Show)
