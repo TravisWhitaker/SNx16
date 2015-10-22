@@ -16,7 +16,8 @@ import Data.Word
 
 import Data.Bits
 
-import qualified Data.Vector.Unboxed as V
+import qualified Data.Vector         as V
+import qualified Data.Vector.Unboxed as VU
 
 import SNXi.Types
 
@@ -104,8 +105,8 @@ getDmemB a c = (dmem c) ! (fromIntegral a)
 getDmemW :: Word16 -> CPU -> Word16
 getDmemW a c = let m = dmem c
                    i = fromIntegral a
-                   l = m V.! i
-                   h = m V.! (i+1)
+                   l = m VU.! i
+                   h = m VU.! (i+1)
                    l' :: Word16
                    l' = fromIntegral l
                    h' :: Word16
@@ -113,7 +114,7 @@ getDmemW a c = let m = dmem c
                in h' .|. l'
 
 setDmemB :: Word16 -> Word8 -> CPU -> CPU
-setDmemB a v c = c {dmem = (dmem c) V.// [((fromIntegral a), v)]}
+setDmemB a v c = c {dmem = (dmem c) VU.// [((fromIntegral a), v)]}
 
 setDmemW :: Word16 -> Word16 -> CPU -> CPU
 setDmemW a v c = let l :: Word8
@@ -121,10 +122,10 @@ setDmemW a v c = let l :: Word8
                      h :: Word8
                      h = fromIntegral ((0xFF00 .&. v) `div` 256)
                      i = fromIntegral a
-                 in c {dmem = (dmem c) V.// [(i, l), (i+1, v)]}
+                 in c {dmem = (dmem c) VU.// [(i, l), (i+1, v)]}
 
 getPmem :: Word16 -> CPU -> Op
-getPmem i c = (pmem c) ! (fromIntegral i)
+getPmem i c = (pmem c) V.! (fromIntegral i)
 
 signedAdd :: Word16 -> Word16 -> Word16
 signedAdd a b = let a' :: Int16
@@ -158,9 +159,9 @@ addFlags a b s = let a' :: Int16
                      b'' = fromIntegral b'
                      s' :: Int16
                      s' = fromIntegral s
-                     z = if s == 0 then True else False
-                     n = if s < 0  then True else False
-                     c = if (a'' + b'') > (fromIntegral s') then True else False
+                     z = s == 0
+                     n = s < 0
+                     c = (a'' + b'') > (fromIntegral s')
                  in (z, n, c)
 
 -- | Please help.
@@ -175,9 +176,9 @@ mulFlags a b s = let a' :: Int16
                      b'' = fromIntegral b'
                      s' :: Int16
                      s' = fromIntegral s
-                     z = if s == 0 then True else False
-                     n = if s < 0  then True else False
-                     c = if (a'' * b'') > (fromIntegral s') then True else False
+                     z = s == 0
+                     n = s < 0
+                     c = (a'' * b'') > (fromIntegral s')
                  in (z, n, c)
 
 setFlags :: (Bool, Bool, Bool) -> CPU -> CPU

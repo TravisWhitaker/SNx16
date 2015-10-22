@@ -84,10 +84,68 @@ interpreter will allow the use of any register width mode with any instruction.
 This behavior is trivial to simulate, but such instructions aren't encodable.
 -}
 
+{-# LANGUAGE OverloadedStrings #-}
+
 module SNXi.Parser where
 
 import Control.Applicative
 
-import Data.Attoparsec as A
+import Control.Monad
 
+import Data.Maybe
 
+import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Lazy as BL
+
+import qualified Data.Map.Strict as M
+
+import qualified Data.Vector.Unboxed as V
+
+import Data.Attoparsec.ByteString.Char8 as A
+import Data.Attoparsec.ByteString.Lazy  as AL
+
+checkWidth8 :: Int -> Word8 -> Bool
+checkWidth8 w v = (fromIntegral v) < 2^w
+
+checkWidth16 :: Int -> Word8 -> Bool
+checkWidth16 w v = (fromIntegral v) < 2^w
+
+validLabel :: B.ByteString -> Bool
+validLabel = B.foldr f True
+    where f _ False = False
+          f c True  = and [ (c /= ' ')
+                          , (c /= '\t')
+                          , (c /= ',')
+                          , (c /= ';')
+                          ]
+
+skipSpace :: A.Parser ()
+skipSpace = A.takeWhile (\c -> (c /= ' ') && (\c /= '\t'))
+
+-- | Assemble and link executable object code.
+objs :: A.Parser (V.Vector Op)
+    (lb, os) <- translate
+
+translate :: A.Parser (M.Map B.ByteString Word16, V.Vector (Op, Maybe B.ByteString))
+translate = fmap (\(a, b) -> (a, V.fromList b)) tr
+    where tr = dirs >>= foldM addDir (M.empty, [])
+
+dirs :: A.Parser [(Maybe B.ByteString, Op, Maybe B.ByteString)]
+dirs = (catMaybes <$> many1 dir) <* A.endOfInput
+
+dir :: A.Parser Maybe (Maybe B.ByteString, Op, Maybe B.ByteString)
+dir = blankLine <|> ((commentLine <|> labeledDir <|> unlabeledDir) <* (A.char '\n'))
+    where blankLine = A.char '\n' >> return Nothing
+          commentLine = A.char ';' >> A.takeWhile (/= '\n') >> return Nothing
+          labeledDir = do
+                l <- A.takeWhile (/= ':')
+                skipSpace
+                (o, l') <- mnemonic
+                ((skipSpace >> commentLine) <|> commentLine <|> return ())
+                if validLabel l then return (Just (Just l, o, l'))
+                                else fail "bad label, must not contain space, tab, comma, or semicolon."
+          unlabeledDir = do
+                skipSpace
+                (o, l') <- mnemonic
+                ((skipSpace >> commentLine) <|> commentLine <|> return ())
+                return (Just (Nothing, o, l'))
