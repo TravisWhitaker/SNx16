@@ -14,6 +14,8 @@ module SNXi.Op where
 
 import Data.Word
 
+import Data.Int
+
 import Data.Bits
 
 import qualified Data.Vector         as V
@@ -100,7 +102,7 @@ setRegW (U r) c v = (setReg r) c (0xFF00 .&. v)
 setRegW (L r) c v = (setReg r) c (0x00FF .&. v)
 
 getDmemB :: Word16 -> CPU -> Word8
-getDmemB a c = (dmem c) ! (fromIntegral a)
+getDmemB a c = (dmem c) VU.! (fromIntegral a)
 
 getDmemW :: Word16 -> CPU -> Word16
 getDmemW a c = let m = dmem c
@@ -122,7 +124,7 @@ setDmemW a v c = let l :: Word8
                      h :: Word8
                      h = fromIntegral ((0xFF00 .&. v) `div` 256)
                      i = fromIntegral a
-                 in c {dmem = (dmem c) VU.// [(i, l), (i+1, v)]}
+                 in c {dmem = (dmem c) VU.// [(i, l), (i+1, h)]}
 
 getPmem :: Word16 -> CPU -> Op
 getPmem i c = (pmem c) V.! (fromIntegral i)
@@ -182,7 +184,7 @@ mulFlags a b s = let a' :: Int16
                  in (z, n, c)
 
 setFlags :: (Bool, Bool, Bool) -> CPU -> CPU
-setFlags (z, n, ca) c = c {zero = z, neg = c, carry = ca}
+setFlags (z, n, ca) c = c {zero = z, neg = n, carry = ca}
 
 -- | Operators are assumed to be correct by construction.
 op :: Op -> CPU -> CPU
@@ -190,17 +192,17 @@ op (AddR ra rb shr) c = let a = getRegW ra c
                             b = (getRegW rb c) `shiftR` (fromIntegral shr)
                             s = signedAdd a b
                             f = addFlags a b s
-                        in incPC $ flags f $ setRegW ra c s
+                        in incPC $ setFlags f $ setRegW ra c s
 op (AddI ra im)     c = let a = getRegW ra c
                             i = fromIntegral im
                             s = signedAdd a i
                             f = addFlags a i s
-                        in incPC $ flags f $ setRegW ra c s
+                        in incPC $ setFlags f $ setRegW ra c s
 op (MulR ra rb shr) c = let a = getRegW ra c
                             b = (getRegW rb c) `shiftR` (fromIntegral shr)
                             s = signedMul a b
                             f = mulFlags a b s
-                        in incPC $ flags f $ setRegW ra c s
+                        in incPC $ setFlags f $ setRegW ra c s
 op (MulI ra im)     c = let a = getRegW ra c
                             i = fromIntegral im
                             s = signedMul a i
@@ -240,7 +242,11 @@ op (MovS ra (R rs)) c = let a = getRegW ra c
                         in incPC $ setDmemW a v c
 op (MovS ra (U rs)) c = let a = getRegW ra c
                             v = getRegW (U rs) c
-                        in incPC $ setDmemB a v c
+                            v' :: Word8
+                            v' = fromIntegral (v `div` 256)
+                        in incPC $ setDmemB a v' c
 op (MovS ra (L rs)) c = let a = getRegW ra c
                             v = getRegW (L rs) c
-                        in incPC $ setDmemB a v c
+                            v' :: Word8
+                            v' = fromIntegral (v .&. 0x00FF)
+                        in incPC $ setDmemB a v' c
