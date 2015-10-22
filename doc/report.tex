@@ -1,0 +1,56 @@
+\documentclass{article}
+\usepackage[letterpaper]{geometry}
+\usepackage{amsmath}
+\usepackage{tikz}
+\usepackage{listings}
+\frenchspacing
+
+\lstset{language=[x86masm]Assembler, basicstyle=\small}
+
+\begin{document}
+
+\title{SNx16 - 16 bit Constant Width Instruction Set Architecture}
+%\subtitle{Assembly Language, Instruction Encoding, Control Logic,
+%and Data Path Specification}
+\author{Chris Ranc, Travis Whitaker}
+\date{October 23\textsuperscript{rd} 2015}
+\maketitle
+
+\begin{abstract}
+\emph{SNx16} a 16 bit instruction set architecture with constant instruction
+width. This document formally specifies an assembly language grammar and
+semanics for the ISA, the instruction encoding scheme, and the necessary control
+logic and data path hardware for a simple non-pipelined implementation of the
+architecture. \emph{SNx16} is a Harvard machine with separate 16 bit address
+spaces for machine code and data.
+\end{abstract}
+
+%\thispagestyle{empty}
+%\clearpage
+%\setcounter{page}{1}
+
+\section{Introduction and Rationale}
+
+The design and specification of \emph{SNx16} is an exercise in the funadmental
+principals of computer architecture. The architecture makes use of 16 bit
+registers and memory addresses, and has separate memory address spaces for
+program code and data. Program code is immutable at program runtime; only one
+translation unit of object code may be loaded into the machine at once, and the
+machine has no facility to bootstrap new object code on its own.
+
+The architecture is minimal (implementing only eight instruction mnemonics) and has no facility for I/O, but is nonetheless useful for writing simple programs. To demonstrate this, a working assembler, linker, and bytecode interpreter are provided along with this specification.
+
+\section{Assembly Language Grammar and Semantics}
+\subsection{Registers, Flags, and Memory}
+\subsection{Arithmetic Instructions}
+\subsection{Data Movement Instructions}
+\subsection{Control Flow Instructions}
+\subsection{Example Program}
+
+\section{Instruction Encoding}
+
+\section{Control Logic and Data Path}
+
+\section{\emph{snxi} Interpreter}
+
+\end{document}
