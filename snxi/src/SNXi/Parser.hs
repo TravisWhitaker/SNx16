@@ -77,6 +77,11 @@ mov ra, rb   ; /ra <- rb/
 mov ra, [rb] ; /ra <- M[rb]/
 mov [ra], rb ; /M[ra] <- rb/
 @
+
+Note that according to the ISA instruction encoding specification, only @mov@
+instructions can operate on registers in any width mode. However, this
+interpreter will allow the use of any register width mode with any instruction.
+This behavior is trivial to simulate, but such instructions aren't encodable.
 -}
 
 module SNXi.Parser where
