@@ -129,6 +129,13 @@ setDmemW a v c = let l :: Word8
 getPmem :: Word16 -> CPU -> Op
 getPmem i c = (pmem c) V.! (fromIntegral i)
 
+signExtend :: Word8 -> Word16
+signExtend b = let b' :: Int8
+                   b' = fromIntegral b
+                   b'' :: Int16
+                   b'' = fromIntegral b'
+               in fromIntegral b''
+
 signedAdd :: Word16 -> Word16 -> Word16
 signedAdd a b = let a' :: Int16
                     a' = fromIntegral a
@@ -194,7 +201,7 @@ op (AddR ra rb shr) c = let a = getRegW ra c
                             f = addFlags a b s
                         in incPC $ setFlags f $ setRegW ra c s
 op (AddI ra im)     c = let a = getRegW ra c
-                            i = fromIntegral im
+                            i = signExtend im
                             s = signedAdd a i
                             f = addFlags a i s
                         in incPC $ setFlags f $ setRegW ra c s
@@ -204,7 +211,7 @@ op (MulR ra rb shr) c = let a = getRegW ra c
                             f = mulFlags a b s
                         in incPC $ setFlags f $ setRegW ra c s
 op (MulI ra im)     c = let a = getRegW ra c
-                            i = fromIntegral im
+                            i = signExtend im
                             s = signedMul a i
                             f = mulFlags a i s
                         in incPC $ setRegW ra c s

@@ -16,9 +16,9 @@ module SNXi.Types where
 
 import Data.Word
 
-import Data.Map.Strict as M
+import qualified Data.Map.Strict as M
 
-import Data.Text as T
+import qualified Data.Text as T
 
 import qualified Data.Vector         as V
 import qualified Data.Vector.Unboxed as VU
@@ -119,3 +119,80 @@ data Op = AddR RegW RegW !Word8 -- ^ Actually restricted to 2 bits.
         | MovS RegW RegW
         deriving (Eq, Ord, Show)
 
+showCPU :: CPU -> String
+showCPU c = concat [ "CPU | Zero: "
+                   , show (zero c)
+                   , "\tNeg: "
+                   , show (neg c)
+                   , "\tCarry: "
+                   , show (carry c)
+                   , "\nPC: "
+                   , show (pc c)
+                   , "\nSP:  "
+                   , show (sp c)
+                   , "\tR1:  "
+                   , show (r1 c)
+                   , "\tR2:  "
+                   , show (r2 c)
+                   , "\tR3:  "
+                   , show (r3 c)
+                   , "\tR4:  "
+                   , show (r4 c)
+                   , "\tR5:  "
+                   , show (r5 c)
+                   , "\nR6:  "
+                   , show (r6 c)
+                   , "\tR7:  "
+                   , show (r7 c)
+                   , "\tR8:  "
+                   , show (r8 c)
+                   , "\tR9:  "
+                   , show (r9 c)
+                   , "\tR10: "
+                   , show (r10 c)
+                   , "\tR11: "
+                   , show (r11 c)
+                   , "\nR12: "
+                   , show (r12 c)
+                   , "\tR13: "
+                   , show (r13 c)
+                   , "\tR14: "
+                   , show (r14 c)
+                   , "\tR15: "
+                   , show (r15 c)
+                   , "\tR16: "
+                   , show (r16 c)
+                   , "\tR17: "
+                   , show (r17 c)
+                   , "\nR18: "
+                   , show (r18 c)
+                   , "\tR19: "
+                   , show (r19 c)
+                   , "\tR20: "
+                   , show (r20 c)
+                   , "\tR21: "
+                   , show (r21 c)
+                   , "\tR22: "
+                   , show (r22 c)
+                   , "\tR23: "
+                   , show (r23 c)
+                   , "\nR24: "
+                   , show (r24 c)
+                   , "\tR25: "
+                   , show (r25 c)
+                   , "\tR26: "
+                   , show (r26 c)
+                   , "\tR27: "
+                   , show (r27 c)
+                   , "\tR28: "
+                   , show (r28 c)
+                   , "\tR29: "
+                   , show (r29 c)
+                   , "\nR30: "
+                   , show (r30 c)
+                   , "\tR31: "
+                   , show (r31 c)
+                   ]
+
+showCPUmem :: CPU -> String
+showCPUmem c = (showCPU c) ++ "\n" ++ show (dmem c)
