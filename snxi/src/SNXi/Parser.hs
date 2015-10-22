@@ -143,8 +143,17 @@ objs = translate >>= link
           deref m i (o, Nothing) = o
           deref m i ((JI _), Just l) = case M.lookup l m of Nothing -> error "no such label"
                                                             (Just r) -> JI (rel (fromIntegral i) r)
-          rel i r = if i > r then i - r
-                             else r - i
+          rel :: Word16 -> Word16 -> Word16
+          rel i r = let i' :: Int
+                        i' = fromIntegral i
+                        r' :: Int
+                        r' = fromIntegral r
+                        o = r - i
+                        o' :: Int16
+                        o' = fromIntegral o
+                        o'' :: Word16
+                        o'' = fromIntegral o'
+                    in o''
 
 -- | Build symbol table.
 translate :: A.Parser (M.Map B.ByteString Word16, V.Vector (Op, Maybe B.ByteString))
@@ -158,8 +167,7 @@ translate = dirs >>= val
 
 -- | Get list of directives, with optional labels and references.
 dirs :: A.Parser [(Maybe B.ByteString, Op, Maybe B.ByteString)]
---dirs = (catMaybes <$> many1 dir) <* A.endOfInput
-dirs = (catMaybes <$> many1 dir)
+dirs = (catMaybes <$> many1 dir) <* A.endOfInput
 
 -- | Parse a line, potentially producing a directive.
 dir :: A.Parser (Maybe (Maybe B.ByteString, Op, Maybe B.ByteString))
@@ -184,7 +192,7 @@ mnemonic = (nl <$> (add <|> mul <|> je <|> jh <|> jl <|> jc <|> mov)) <|> j <|> 
     where nl = (,Nothing)
 
 add :: A.Parser Op
-add = "add" >> skipSpace >> (addR <|> addI <|> addS)
+add = "add" >> skipSpace >> (addS <|> addR <|> addI)
     where addR = AddR <$> (regw <* skipArgSep) <*> regw <*> pure 0
           addI = AddI <$> (regw <* skipArgSep) <*> imm 7
           addS = AddR <$> (regw <* skipArgSep) <*> (regw <* ">>") <*> imm 2
@@ -326,6 +334,6 @@ imm w = A.signed A.decimal >>= val
                                                 else return $ (0xFF `shiftL` w) .|. (fromIntegral i))
 
 lab :: A.Parser B.ByteString
-lab = A.takeWhile1 (/= ':') >>= val
+lab = A.takeWhile1 (\c -> (c /= ':') && (c /= '\n')) >>= val
     where val l = if validLabel l then return l
                                   else fail "bad label, must not contain space, tab, comma, or semicolon."
