@@ -10,8 +10,6 @@
 \begin{document}
 
 \title{SNx16 - 16 bit Constant Width Instruction Set Architecture}
-%\subtitle{Assembly Language, Instruction Encoding, Control Logic,
-%and Data Path Specification}
 \author{Chris Ranc, Travis Whitaker}
 \date{October 23\textsuperscript{rd} 2015}
 \maketitle
@@ -25,32 +23,485 @@ architecture. \emph{SNx16} is a Harvard machine with separate 16 bit address
 spaces for machine code and data.
 \end{abstract}
 
-%\thispagestyle{empty}
-%\clearpage
-%\setcounter{page}{1}
-
 \section{Introduction and Rationale}
 
 The design and specification of \emph{SNx16} is an exercise in the funadmental
 principals of computer architecture. The architecture makes use of 16 bit
 registers and memory addresses, and has separate memory address spaces for
 program code and data. Program code is immutable at program runtime; only one
-translation unit of object code may be loaded into the machine at once, and the
-machine has no facility to bootstrap new object code on its own.
+linked translation unit of object code may be loaded into the machine at once,
+and the machine has no facility to bootstrap new object code on its own.
 
-The architecture is minimal (implementing only eight instruction mnemonics) and has no facility for I/O, but is nonetheless useful for writing simple programs. To demonstrate this, a working assembler, linker, and bytecode interpreter are provided along with this specification.
+\emph{SNx16} makes use of 32 registers, numbered from zero to 31. Register zero
+is referred to with the special mnemonic \texttt{sp} and is meant to be used as
+a stack pointer, although the architecture does not feature any stack management
+instructions or mnemonics.
+
+The architecture is minimal (implementing only eight instruction mnemonics) and
+has no facility for I/O, but is nonetheless useful for writing simple programs.
+To demonstrate this, a working assembler, linker, and bytecode interpreter are
+provided along with this specification.
 
 \section{Assembly Language Grammar and Semantics}
+
+A specific assembly language grammar and semantics has been specified for use
+with the \emph{SNx16} architecture. The grammar and semanics roughly resemble
+the \emph{Intel} syntax for the x86 family of architectures. Specifically,
+register names do not need to be prefixed with any special character, mnemonic
+arguments are separated with commas, the semicolon character is used to delimit
+comments, memory address dereferences are indicated by enclosing a value in
+square brackets, and label declarations must be suffixed with a colon.
+
+All assembly language directives adhere to the following syntactic form:
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+\texttt{label:} & \texttt{mnemonic} & \texttt{arg1} & \texttt{,} & \texttt{arg2} & \texttt{;} \emph{comment} \\ \hline
+\end{tabular}
+\end{center}
+
+Legal labels are any strings that do not contain any grammatical tokens.
+Mnemonic arguments may be register identifiers, dereferenced register
+identifiers, or immediate values. Legal immediate values vary depending on the
+mnemonic in use, specifically, varying bits of precision will be provided for
+immediate values in various positions. Decimal immediate values are supported.
+Any legal decimal value may be prefixed with the minus sign to indicate a
+negative value. The \emph{SNx16} machine uses two's complement to represent
+signed quantities.
+
 \subsection{Registers, Flags, and Memory}
+
+The \emph{SNx16} architecture features 32 registers, each 16 bits wide, as
+well as a 16 bit program counter. The program counter is not directly available
+to the machine language programmer, and may only be manipulated indirectly via
+jump instructions. The register zero is given the special mnemonic \texttt{sp}
+to indicate its intended use as a stack pointer. However, as the \emph{SNx16}
+architecture lacks any stack manipulation instructions, this usage is merely a
+convention. Register names must be prefixed with the letter \texttt{r}.
+
+Three condition flags are provided, Z (zero), C (carry), and N (negative). These
+flags are not rendered available to the machine language programmer in the form
+of bits in a special purpose register; they may only be set by performing
+arithmetic operations and may only be read by conditional jump instructions.
+Instructions that do not explicitly perform arithmetic operations are guaranteed
+to preserve the flag states. Function calls are not guaranteed to preserve the
+state of the flags, as there is no straightforward facility for storing and
+retrieving flag states.
+
+Two separate memory address spaces are provided, the data memory and the
+instruction memory. The instruction memory is immutable at run time, and may
+only be addressed by the 16 bit program counter during instruction fetch and
+decoding. All jump instructions use program counter relative addressing; due to
+immediate value encoding limitations, it is only possible to jump $2^{11}$
+instructions away from the current program counter value. As a convention, the
+machine begins code execution at instruction address 0. The data memory may be
+directly addressed via 16 bit values present in any register. As a convention,
+the stack pointer register \texttt{sp} is set to $2^{16} - 1$ on machine
+initialization; the stack ``grows downward'' by convention. \emph{SNx16} is
+a \emph{little endian} architecture.
+
 \subsection{Arithmetic Instructions}
+
+Two arithmetic instructions are provided, \texttt{add} and \texttt{mul}. These
+instructions take the following forms:
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline
+\texttt{add} & \texttt{ra} &\texttt{,} & \texttt{rb} & $r_{a} \leftarrow r_{a} + r_{b}$ \\ \hline
+\texttt{add} & \texttt{ra} &\texttt{,} & \texttt{Im7} & $r_{a} \leftarrow r_{a} + Im_{7}$ \\ \hline
+\texttt{add} & \texttt{ra} &\texttt{,} & \texttt{rb>>Im2} & $r_{a} \leftarrow r_{a} + (r_{b} >> Im_{2})$ \\ \hline
+\texttt{mul} & \texttt{ra} &\texttt{,} & \texttt{rb} & $r_{a} \leftarrow r_{a} * r_{b}$ \\ \hline
+\texttt{mul} & \texttt{ra} &\texttt{,} & \texttt{Im7} & $r_{a} \leftarrow r_{a} * Im_{7}$ \\ \hline
+\texttt{mul} & \texttt{ra} &\texttt{,} & \texttt{rb>>Im2} & $r_{a} \leftarrow r_{a} * (r_{b} >> Im_{2})$ \\ \hline
+\end{tabular}
+\end{center}
+
+These instruction set the machine's three status flags according to the result
+of the computation. Both instructions may be used to add/multiply two register values
+together (storing the result in the first register argument), add/multiple up to a seven
+bit immediate to/with a register value, or to add/multiple the value of one register to/with
+another after performing a logical right shift by up to 4 places. It should be
+noted that multiplying two 16 bit numbers may yield a value requiring up to 32
+bits of precision to represent; the \texttt{mul} instruction only stores the
+lower 16 bits of the product.
+
 \subsection{Data Movement Instructions}
+
+One data movement instruction is provided, \texttt{mov}. The \texttt{mov}
+mnemonic may be invoked with one of four syntactic forms to achieve various data
+movement effects. This instruction takes one of the following forms:
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline
+\texttt{mov} & \texttt{ra} &\texttt{,} & \texttt{rb} & $r_{a} \leftarrow r_{b}$ \\ \hline
+\texttt{mov} & \texttt{ra} &\texttt{,} & \texttt{Im7} & $r_{a} \leftarrow Im_{7}$ \\ \hline
+\texttt{mov} & \texttt{ra} &\texttt{,} & \texttt{[rb]} & $r_{a} \leftarrow M[r_{b}]$ \\ \hline
+\texttt{mov} & \texttt{[ra]} &\texttt{,} & \texttt{rb} & $M[r_{a}] \leftarrow r_{b}$ \\ \hline
+\end{tabular}
+\end{center}
+
+This instruction may be used to copy the value from one register to another, to
+set the value of a register equal to an immediate value of up to seven bits of
+precision, to set the value of a register equal to a word read from memory, or
+to set a memory word equal to the value of a register.
+
 \subsection{Control Flow Instructions}
+
+Five instructions are provided for control flow. Each of these instructions
+takes one of the following syntactic forms, where \texttt{j*} is metasyntax for
+any conditional jump instruction:
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline
+\texttt{j*} & \texttt{Im12} & $PC \leftarrow PC + Im_{12}$ \\ \hline
+\texttt{j*} & \texttt{[ra]} & $PC \leftarrow PC + r_{a}$ \\ \hline
+\texttt{j*} & \texttt{[ra + Im7]} & $PC \leftarrow PC + r_{a} + Im_{7}$ \\ \hline
+\end{tabular}
+\end{center}
+
+Each conditional jump instruction may be used to displace the PC with a value of
+up to 12 bits of precision, to displace the PC with a value in a register, or to
+displace the PC with a value in a register and an immediate value of up to seven
+bits of precision.
+
+The five jump types provided are \texttt{j}, \texttt{je}, \texttt{jh},
+\texttt{jl}, and \texttt{jc}, which jump unconditionally, when the last ALU
+operation returned a value of zero, when the last ALU operation produced a
+positive value, when the last ALU operation produced a negative value, and when
+the last ALU operation required a carryout, respectively.
+
+Typically when these mnemonics are used in an assembly language program, a label
+will be used in place of a $Im_{12}$. The true displacement will be computed by
+the linker. This prevents the machine language programmer from having to
+manually compute the instruciton memory offset.
+
 \subsection{Example Program}
+
+As a small example of the application of the \emph{SNx16} assembly language, the
+following program is provided. This program computes the $n^{th}$ number in the
+Fibonacci sequence, where $n$ is provided at program startup in \texttt{r1}. The
+result is returned in \texttt{r2}. As a convention, the \emph{SNx16} machine
+will halt when its global state reaches a fixed point; that is, when the final
+valid instruction in the instruction memory has been passed. This program may
+be assembled and executed by the \emph{snxi} bytecode interpreter, see the final
+section of this report.
+
+\pagebreak
+
+\begin{lstlisting}
+;Fibonacci implementation. Put the nth fibonacci number in R2 where n is in R1.
+	mov r1, 16 ; Computing the nth fibonacci.
+fib:	mov r4, r1
+	mov r3, r1
+	mul r3, 1
+	je fibr ; jump to return
+	mov r3, r1
+	add r3, -1
+	mul r3, 1
+	je fibr ; jump to return
+	add r1, -1 ; nth fib requires n-1 iterations
+	mov r3, 0  ; second to last result
+	mov r4, 1  ; last result
+fibl:	mov r5, r1
+	mul r5, 1
+	je fibr ; jump to return
+	mov r6, r3 ; save second to last in temp
+	mov r3, r4 ; last result is now second to last
+	add r4, r6 ; new result is last result plus second to last result
+	add r1, -1
+	j fibl
+fibr:	mov r2, r4
+\end{lstlisting}
 
 \section{Instruction Encoding}
 
+All \emph{SNx16} instructions are encoded in 16 bits. Each instruction is
+encoded according to one of the following schemes. The first scheme encodes
+instructions with two register arguments:
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+Immediate Flag [15] & Opcode [14-12] & $r_{a}$ [11-7] & $r_{b}$ [6-2] & Shift/Move [1-0] \\ \hline
+\end{tabular}
+\end{center}
+
+The immediate flag is present in all encoding schemes and indicates to the
+control logic whether or not an immediate value is encoded in the instruction;
+in the case of a register-register instruction, the immediate flag will always
+be zero. The opcode identifies the specific operation to be carried out; legal
+opcodes for register-register instructions are the codes corresponding to
+\texttt{add}, \texttt{mul}, and \texttt{mov} instructions. $r_{a}$ is the
+destination register, and $r_{b}$ is the source register. The final two bits
+possess different semantics depending on the opcode. In the case of arithmetic
+instructions, these two bits indicate an (unsigned) number of bits to shift the
+value of $r_{b}$ before performing the principal operation. In the case of a
+data movement instruction, these two bits indicate the data movement type; in
+the case of register-register instructions, a register-register movement will
+always be encoded.
+
+The second scheme encodes register-immediate instructions:
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+Immediate Flag [15] & Opcode [14-12] & $r_{a}$ [11-7] & $Im_{7}$ [6-0] \\ \hline
+\end{tabular}
+\end{center}
+
+In the case of register-immediate instructions, the immediate flag is always
+set. All opcodes are legal in register-immediate instructions.
+
+The final scheme encodes extended immediate instructions:
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+Immediate Flag [15] & Opcode [14-12] & $Im_{12}$ [11-0] \\ \hline
+\end{tabular}
+\end{center}
+
+In the case of extended immediate instructions, the immediate flag is always
+set. Legal opcodes in extended immediate instructions are the codes
+corresponding to the \texttt{j}, \texttt{je}, \texttt{jh}, \texttt{jl}, and
+\texttt{jc} instructions, i.e.\ any control flow instruction.
+
 \section{Control Logic and Data Path}
+\subsection{Control Signals}
+The main control of the 16-bit architecture uses a 3 bit opcode as its input and
+is taken from bits 14-12 in an instruction.  These represent 8 possible
+instructions that can be utilized by this architecture.
+
+The instructions are as follows:
+
+\begin{center}
+\begin{tabular}{|c|l|}
+\hline
+000 & add (addition) \\ \hline
+001 & mul (multiplication) \\ \hline
+010 & mov (move) \\ \hline
+011 & j (jump) \\ \hline
+100 & je (jump if equal) \\ \hline
+101 & jl (jump if lower) \\ \hline
+110 & jh (jump if higher) \\ \hline
+111 & jc (jump if carry) \\ \hline
+\end{tabular}
+\end{center}
+
+After the main controller recieves the opcode input it has two outputs that
+direct its sub controllers.  These being JumpOP which directs the JumpControl
+and ALUOP which directs the ALUControl.
+
+JumpOP is a 3 bit signal that tells JumpControl which of the jump operations are
+going to occur, while the ALUOP is a 2 bit signal that tells the ALUControl what
+ALU type operation will happen.
+
+JumpOP
+
+\begin{center}
+\begin{tabular}{|c|l|}
+\hline
+000 & No Jump (ALU operation) \\ \hline
+001 & j (jump) \\ \hline
+010 & je (jump if equal) \\ \hline
+011 & jl (jump if lower) \\ \hline
+100 & jh (jump if higher) \\ \hline
+101 & jc (jump if carry) \\ \hline
+110 & N/A \\ \hline
+111 & N/A \\ \hline
+\end{tabular}
+\end{center}
+
+ALUOP
+
+\begin{center}
+\begin{tabular}{|c|l|}
+\hline
+00 & No ALU operation (jump) \\ \hline
+01 & add (addition) \\ \hline
+10 & mul (multiplication) \\ \hline
+11 & mov (data movement) \\ \hline
+\end{tabular}
+\end{center}
+
+Based off of these outputs the sub controllers will interpret secondary inputs
+and set various output signals for configuring other hardware in the design.
+
+The JumpControler's secondary input to be used is a 3 bit signal from the ALU
+that specifies the flags set from a previous ALU instruction.  These flags are
+each represented by 1 bit and denoted as N (negative), Z (zero), and C (carry).
+These in turn are set respectively when the previous ALU instruction resulted in
+a negative result, zero result, or a result that had a carryout.
+
+These flags are meant to be utilized by the conditional jumps when deciding if
+a jump will occur, in the case of \texttt{j} these flags are ignored.  The
+\texttt{je} instruction will verify if the Z bit is set to indicate if an
+operation caused  two values to negate one another giving a value of 0, thus
+indicating they were the same. For instructions \texttt{jl} and \texttt{jh} the
+N flag is checked by both to see if a value was lesser or greater than another,
+\texttt{jh} also checks the N bit as well to verify that the value is not zero.
+Specifically \texttt{jl} checks if N is set to see if a value is lesser than
+another while \texttt{jh} check if both N and Z are not set to verify that a
+value is higher than another.  Lasty instruction \texttt{jc} checks the C flag
+in the event that an operations resulted in a carryout bit.
+
+The ALUController's secondary input stems directly from the last 2 bits of the
+16 bit instruction bus.
+
+In the event of an \texttt{add} or \texttt{mult} instruction these values are
+utilized as a 2 bit immediate to act as a logical shift right amount for the
+data of the second register before being used.  It is set to 0 by default if no
+shift amount is stated in the assembly code.  The ALUcontroller initiates this
+shift through a 2 bit shift control signal. This sets the shift amount for a
+variable shifter that the contents of the second register passes through before
+being used in the ALU.
+
+When a \texttt{mov} instruction is used these bits represent three variations
+of input and output that can be utilized for it.  These are caused by the
+ALUController setting three various signals memtoreg, memwrite, and regwrite to
+allow for the right input and outputs to happen.
+
+mov variations and corresponding signals:
+
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline
+00 & $r_{a} \leftarrow r_{b}$ & memtoreg = 0, memwrite = 0, regwrite = 1 \\ \hline
+01 & $r_{a} \leftarrow M[r_{b}]$ & memtoreg = 1, memwrite = 0, regwrite = 1 \\ \hline
+10 & $M[r_{a}] \leftarrow r_{b}$ & memtoreg = 0, memwrite = 1, regwrite = 0 \\ \hline
+11 & N/A & N/A \\ \hline
+\end{tabular}
+\end{center}
+
+The last remaining output of the ALUController is the ALUControl which is a 2
+bit signal that tells the ALU what operation is to be used.  The definitions of
+which are the same as the ALUOP.
+
+The first bit of the 16 bit instruction bus has a special control for each of
+the instructions.  It can determine if an immediate or register value is to be
+used for each of the functions.  In the case of all jump type instructions when
+the bit is set a 12 bit immediate is utilized for changing the point of the PC
+for a jump.  When not set the jump instructions can utilize the contents of a
+register and have the opiton of also adding a 4 bit immediate for incrementing
+the program counter.  In the case of \texttt{add}, \texttt{mult}, and
+\texttt{mov} a 7 bit immediate can be utilized  as the secondary input for the
+functions when the bit is set.  In the case of \texttt{add} and \texttt{mul}
+it'll interact with the contents of a chosen register and stored there. In the
+case of the register to register variation of \texttt{mov} the register
+reciveing new contents is getting them from an immediate.  The other variations
+of \texttt{mov} have this canceled via cancel immediate signal sent out by the
+ALUController.
+
+\subsection{Instruction Timing}
+
+With the control logic fully specified, a hypothetical timing analysis of the
+critical signal pathways through the machine model may be carried out. This
+analysis will be undertaken with the following assumptions:
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|}
+\hline
+Memory Unit Operation & 2 ns \\ \hline
+Register File Read/Control & 1 ns \\ \hline
+Register File Write & 1 ns \\ \hline
+Arithmetic Logic Unit Operation & 1 ns \\ \hline
+Conditional Program Counter Update & 3 ns \\ \hline
+\end{tabular}
+\end{center}
+
+Operating under these assumptions, a time estimate for machine evaluation of an
+arithmetic instruction may be carried out:
+
+\begin{gather*}
+\text{Instruction Fetch} + \text{Register Read} + \text{ALU} + \text{Register Write} \\
+2 + 1 + 2 + 1 = 6 ns \\
+\end{gather*}
+
+Similarly for register-register data movement instructions:
+
+\begin{gather*}
+\text{Instruction Fetch} + \text{Register Read} + \text{ALU} + \text{Register Write} \\
+2 + 1 + 2 + 1 = 6 ns \\
+\end{gather*}
+
+Similarly for register-memory data movement instructions:
+
+\begin{gather*}
+\text{Instruction Fetch} + \text{Register Read} + \text{ALU} + \text{Memory Write} \\
+2 + 1 + 2 + 2 = 7 ns \\
+\end{gather*}
+
+Similarly for memory-register data movement instructions:
+
+\begin{gather*}
+\text{Instruction Fetch} + \text{Register Control} + \text{Memory Read} + \text{ALU} + \text{Register Write} \\
+2 + 1 + 2 + 2 + 1 = 8 ns \\
+\end{gather*}
+
+Based on these estimations, a resonable clock period for a physical
+implementation of the \emph{SNx16} architecture is 8 nanoseconds, yielding a
+clock frequency of 125 MHz.
 
 \section{\emph{snxi} Interpreter}
+
+As a demonstration of the \emph{SNx16} architecture, an assembler and bytecode
+interpreter is provided with this specification. The interpreter is written in
+the \emph{Haskell} programming language, and requires the
+\emph{Glasgow Haskell Compiler} (GHC) version 7.10.2 and \emph{Cabal} build tool
+to compile and execute. The interpreter can be operated in various modes,
+providing either the final CPU state after program termination, or a snapshot of
+machine state between each instruction execution. Memory contents may be
+included. The assembler supports the full syntax specified in this document.
+Only a single translation unit (i.e.\ assembly file) may be used at a time.
+Execution begins at the first instruction in the file, and the CPU halts on
+``fall-through.''
+
+As an example, the following \emph{SNx16} assembly language program is executed:
+
+\begin{lstlisting}
+;Fibonacci implementation. Put the nth fibonacci number in R2 where n is in R1.
+	mov r1, 16 ; Computing the nth fibonacci.
+fib:	mov r4, r1
+	mov r3, r1
+	mul r3, 1
+	je fibr ; jump to return
+	mov r3, r1
+	add r3, -1
+	mul r3, 1
+	je fibr ; jump to return
+	add r1, -1 ; nth fib requires n-1 iterations
+	mov r3, 0  ; second to last result
+	mov r4, 1  ; last result
+fibl:	mov r5, r1
+	mul r5, 1
+	je fibr ; jump to return
+	mov r6, r3 ; save second to last in temp
+	mov r3, r4 ; last result is now second to last
+	add r4, r6 ; new result is last result plus second to last result
+	add r1, -1
+	j fibl
+fibr:	mov r2, r4
+\end{lstlisting}
+
+This program will compute the 16\textsuperscript{th} Fibonacci number; the
+result will be found in the \texttt{r2} register on program termination.
+
+\begin{verbatim}
+travis@gmachine ~/SNx16/snxi $ snxi -f fib.s
+CPU | Zero: True        Neg: False      Carry: False
+PC: 21
+SP:  65535      R1:  0  R2:  987        R3:  610        R4:  987        R5:  0
+R6:  377        R7:  0  R8:  0  R9:  0  R10: 0  R11: 0
+R12: 0  R13: 0  R14: 0  R15: 0  R16: 0  R17: 0
+R18: 0  R19: 0  R20: 0  R21: 0  R22: 0  R23: 0
+R24: 0  R25: 0  R26: 0  R27: 0  R28: 0  R29: 0
+R30: 0  R31: 0
+\end{verbatim}
+
+The correct result, 987, may be read off from \texttt{R2}.
 
 \end{document}
