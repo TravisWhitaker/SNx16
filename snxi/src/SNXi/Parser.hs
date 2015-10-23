@@ -46,30 +46,34 @@ Unconditional Jump (unsigned immediates, only full-width):
 @
 j Im12       ; /PC <- PC + Im12/
 j [ra]       ; /PC <- PC + ra/
-j [ra + Im4] ; /PC <- PC + ra + Im4/
+j [ra + Im7] ; /PC <- PC + ra + Im4/
 @
 
 Jump If Equal (unsigned immediates, only full-width):
 @
+je Im12
 je [ra]       ; /PC <- PC + ra/
-je [ra + Im4] ; /PC <- PC + Im4/
+je [ra + Im7] ; /PC <- PC + Im4/
 
 Jump Higher (unsigned immediates, only full-width):
 @
+jh Im12
 jh [ra] ; /PC <- PC + ra/
-jh [ra + Im4] ; /PC <- PC + Im4/
+jh [ra + Im7] ; /PC <- PC + Im4/
 @
 
 Jump Lower (unsigned immediates, only full-width):
 @
+jl Im12
 jl [ra] ; /PC <- PC + ra/
-jl [ra + Im4] ; /PC <- PC + Im4/
+jl [ra + Im7] ; /PC <- PC + Im4/
 @
 
 Jump If Carry Set (unsigned immediates, only full-width):
 @
+jc Im12
 jc [ra] ; /PC <- PC + ra/
-jc [ra + Im4] ; /PC <- PC + Im4/
+jc [ra + Im7] ; /PC <- PC + Im4/
 @
 
 Data Movement (any width mode):
